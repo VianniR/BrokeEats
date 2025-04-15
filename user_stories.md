@@ -1,6 +1,6 @@
-# 📄 User Stories and Exceptions
+# User Stories and Exceptions
 
-## 👤 USER STORIES
+## USER STORIES
 
 1. As a college student, I want to be able to submit reviews for restaurants so I can help others find affordable food options.
 2. As a money-saving traveler, I want to filter food spots based on things like price or portion size so that I can eat well while sticking to my budget.
@@ -17,7 +17,7 @@
 
 ---
 
-## ⚠️ EXCEPTIONS
+## EXCEPTIONS
 
 1. **Exception: User submits a review without being logged in**  
    The system will return an error and prompt the user to log in.
