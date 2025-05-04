@@ -5,6 +5,7 @@
 - Vianni Richards (vorichar@calpoly.edu)
 - Josh Hall (jhall61@calpoly.edu)
 - Rafael Pena (rpena06@calpoly.edu)
+- Uriel Hernandez (uherna05@calpoly.edu)
 
 ## Project Description
 
