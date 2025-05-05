@@ -1,39 +1,128 @@
-1. Change profile
+## 1. Change Profile
 
-GET profile 
-* profile attributes, preferences listed
+1. **Fetch full profile**  
+   ```
+   GET /profiles/{userId}
+    200 OK
+   {
+     "userId":"…",
+     "name":"…",
+     "joinedAt":"…",
+     "preferences":{…}     
+   }
+   ```
 
-PATCH profile
-* change profile picture
+2. **Update profile picture**  
+   ```
+   PATCH /profiles/{userId}
+   Request body (any of):
+   {
+     "name":"string",         
+     "avatarUrl":"https://…"
+   }
+    200 OK
+   {
+     "success":true,
+     "profile":{
+       "userId":"…",
+       "name":"…",
+       "joinedAt":"…"
+     }
+   }
+   ```
 
+---
+
+## 2. Get Recommendations Based on Your Own Preferences
+
+1. **Fetch profile**  
+   ```
+   GET /profiles/{userId}
+   ```
+   
+
+2. **Set or update taste & budget**  
+   ```
+   PATCH /profiles/{userId}/preferences
+   Request body:
+   {
+     "budgetMax":15,
+     "dietary":["vegan","gluten free"],
+     "cuisines":["mexican","thai"]
+   }
+    200 OK
+   {
+     "success":true,
+     "preferences":{
+       "budgetMax":15,
+       "dietary":[…],
+       "cuisines":[…]
+     }
+   }
+   ```
+
+3. **Fetch tailored recommendations**  
+   ```
+   GET /profiles/{userId}/recommendations
+    200 OK
+   {
+     "recommendations":[
+       { "restaurantId":"…","name":"…","matchScore":0.87 },
+       …
+     ]
+   }
+   ```
+
+---
+
+## 3. Review Lifecycle
+
+1. **Find restaurant**  
+
+     ```
+     GET /restaurants?page=1&limit=50
+     ```
+    
+
+2. **Get full restaurant details**  
+   ```
+   GET /restaurants/{restaurantId}
+   → returns address, avgPrice, tags, etc.
+   ```
+
+3. **Submit a new review**  
+   ```
+   POST /reviews
+   {
+     "restaurantId":"…",
+     "userId":"…",
+     "priceRating":3,
+     "valueRating":4,
+     "comment":"Huge portions for the price."
+   }
+    200 OK { "success":true, "reviewId":"…" }
+   ```
+
+4. **Edit review**  
+   ```
+   PATCH /reviews/{reviewId}
+   Request body (any of):
+   {
+     "priceRating":2,
+     "valueRating":5,
+     "comment":"Actually, they upped their prices…"
+   }
+    200 OK { "success":true, "review":{…updated…} }
+   ```
+
+5. **Locate review**  
+   ```
+   GET /restaurants/{restaurantId}/reviews?page=1&limit=50
  
+   ```
 
-
-2. Get reccomndations based on own preferences (user did not add preferences on making of account)
-
-GET profile
-
-PATCH preferences 
-* edit preferences for what types of food you like, dietary restrictions, and/or budget
-
-GET recommendations
-* search for restaurants that fit profile preferences
-
- 
-
-3. Create review for a restaurant, edit it and delete it
-
-GET restaurant
-* search for restaturant by name
-
-POST review
-* submit a review for a restaurant!
-
-PATCH review - edit review
-* Forgot an optional attribute, add to review
-
-GET restaurant/review -search for the review
-* search for review based on restaurant and review ID
-
-DELETE review - delete the review
-* delete own review
+6. **Delete review**  
+   ```
+   DELETE /reviews/{reviewId}
+    204 No Content
+   ```
