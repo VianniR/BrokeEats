@@ -13,6 +13,7 @@ router = APIRouter(
 )
 
 
+
 class Preferences(BaseModel):
     id: int
     name: str
