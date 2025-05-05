@@ -108,6 +108,7 @@ def get_user_preferences(user_id: int) -> List[Preferences]:
         return preferences
 
 
+
 @router.post("/restaurants/{restaurant_id}", status_code=status.HTTP_201_CREATED)
 def add_restaurant_preference(restaurant_id: int, preference_name: str, user_id: int):
     with db.engine.begin() as conn:
