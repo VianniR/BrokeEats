@@ -3,7 +3,7 @@
 Bob is signing up for BrokeEats and wants to set a gluten-free dietary preference
 
 - First, Bob retrieves his profile by calling GET/profiles.  **Output**: JSON with profile data
-- Bob then sets his display name using PATCH/profiles.  **Output**: 200 OK
+- Bob then changing his display name using PATCH/profiles.  **Output**: 200 OK with new profile data
 - Bob then sets his food preference using PATCH/profiles/preferences and adds “gluten free” to his dietary preferences  **Output**: 200 OK
 
 
