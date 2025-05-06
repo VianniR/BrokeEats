@@ -13,13 +13,39 @@ router = APIRouter(
 )
 
 
+class NewPreference(BaseModel):
+  name: str
 
 class Preferences(BaseModel):
     id: int
     name: str
 
+@router.post("/preferences", response_model=Preferences)
+def create_preferences(preferences: NewPreference):
+    try:
+        with db.engine.begin() as conn:
+            pref_id = conn.execute(sqlalchemy.text("""
+            INSERT INTO preferences (name)
+            VALUES (:name)
+            RETURNING id;
+            """), [
+                {
+                    "name": preferences.name,
+                }
+            ]).scalar()
+    except sqlalchemy.exc.IntegrityError:
+        with db.engine.connect() as conn:
+            pref_id = conn.execute(sqlalchemy.text("""
+            SELECT id FROM preferences WHERE name = :name"""),[
+                {
+                    "name": preferences.name,
+                }
+            ]).scalar_one()
+    return Preferences(id=pref_id, name=preferences.name)
 
-@router.post("/get_preferences", response_model=List[Preferences])
+
+
+@router.get("/get_preferences", response_model=List[Preferences])
 def get_preferences() -> List[Preferences]:
     pref_list: List[Preferences] = []
     with db.engine.connect() as conn:
@@ -36,7 +62,7 @@ def get_preferences() -> List[Preferences]:
     return pref_list
 
 
-@router.post("/profiles/get_preferences/{user_id}", status_code=status.HTTP_201_CREATED)
+@router.post("/profiles/get_preferences/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def add_user_preference(preference_name: str, user_id: int):
     with db.engine.begin() as conn:
         '''name_found = conn.execute(
@@ -86,7 +112,7 @@ def add_user_preference(preference_name: str, user_id: int):
             x = 1
 
 
-@router.post("/profiles/{user_id}", response_model=List[Preferences])
+@router.get("/profiles/{user_id}", response_model=List[Preferences])
 def get_user_preferences(user_id: int) -> List[Preferences]:
     preferences: List[Preferences] = []
     with db.engine.begin() as conn:
@@ -182,7 +208,7 @@ def add_restaurant_preference(restaurant_id: int, preference_name: str, user_id:
             x = 1
 
 
-@router.post(
+@router.get(
     "/restaurants/get_preferences/{restaurant_id}", response_model=List[Preferences]
 )
 def get_restaurant_preferences(restaurant_id: int) -> List[Preferences]:

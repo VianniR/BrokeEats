@@ -23,7 +23,7 @@ app = FastAPI(
   )
 
 
-app.include_router(restaurants.router)
+#app.include_router(restaurants.router)
 app.include_router(preferences.router)
 app.include_router(users.router)
 
