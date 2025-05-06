@@ -2,7 +2,8 @@
 
 Bob is signing up for BrokeEats and wants dinner ideas under $12 that fit his gluten-free preference. 
 
-- First, Bob retrieves his profile by calling GET/profiles. 
+- First, Bob makes his profile by calling POST/users/profiles
+- Then, Bob retrieves his profile by calling GET/profiles. 
 - Bob then changes his display name using PATCH/profiles. 
 - Bob then adds a food preference using POST/profiles/preferences and adds “gluten free” to his dietary preferences 
 
