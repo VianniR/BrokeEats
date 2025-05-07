@@ -69,7 +69,7 @@ def get_profile(user_id: int):
 @router.patch("profile/{id}", response_model=Profile)
 def update_profile(user_id: int, payload: ProfileUpdate):
     """Updates any provided user fields."""
-    updates = payload.dict(exclude_unset=True)
+    updates = payload.model_dump(exclude_unset=True)
 
     updates = {k: v for k, v in updates.items() if not (isinstance(v, str) and v.strip() == "")}
 
