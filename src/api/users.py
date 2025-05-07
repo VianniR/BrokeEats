@@ -51,13 +51,18 @@ def create_profile(profile: NewUser) -> Profile:
 
 @router.get("/profile/{id}", response_model=Profile)
 def get_profile(user_id: int):
-    with db.engine.begin() as connection:
-        user = connection.execute(
-            sqlalchemy.text(
-                "SELECT id, name, username, email, permissions FROM users WHERE users.id = :user_id"
-            ),
-            {"user_id": user_id}
-        ).one()
+
+
+    try:
+        with db.engine.begin() as connection:
+            user = connection.execute(
+                sqlalchemy.text(
+                    "SELECT id, name, username, email, permissions FROM users WHERE users.id = :user_id"
+                ),
+                {"user_id": user_id}
+            ).one()
+    except sqlalchemy.exc.NoResultFound:
+        raise HTTPException(status_code=404, detail="User not found")
     return user
 
 # PATCH endpoint to update username

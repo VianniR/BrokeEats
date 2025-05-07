@@ -6,6 +6,10 @@ Bob is signing up for BrokeEats and wants to set a gluten-free dietary preferenc
 - Bob then changing his display name using PATCH/profiles.  **Output**: 200 OK with new profile data
 - Bob then sets his food preference using PATCH/profiles/preferences and adds “gluten free” to his dietary preferences  **Output**: 200 OK
 
+- First, Bob makes his profile by calling POST/users/profiles
+- Then, Bob retrieves his profile by calling GET/profiles. 
+- Bob then changes his display name using PATCH/profiles. 
+- Bob then adds a food preference using POST/profiles/preferences and adds “gluten free” to his dietary preferences
 
 Carol wants to discover highly-rated Italian spots under $20 and read recent reviews
 
