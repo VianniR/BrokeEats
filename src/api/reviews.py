@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status, HTTPException
 from pydantic import BaseModel, Field, field_validator
-from typing import List
+from typing import List, Optional
 from src.api import auth
 import sqlalchemy
 from src import database as db
@@ -15,11 +15,11 @@ class Review(BaseModel):
     restaurant_id: int
     cuisine_id: int
     overall: float
-    food: float
-    service: float
-    price: float
-    cleanliness: float
-    note: str 
+    food: Optional[float] = None
+    service: Optional[float] = None
+    price: Optional[float] = None
+    cleanliness: Optional[float] = None
+    note: Optional[str] = Field(None, example = "Great Place")
 
 
 @router.post("/reviews", response_model = Review)
@@ -60,7 +60,6 @@ def create_review(review : Review):
     )
 
 @router.get("/reviews/{restaurant_id}", response_model = List[Review])
-
 def get_reviews(restaurant_id: int):
     with db.engine.begin() as conn:
         revs = conn.execute(
