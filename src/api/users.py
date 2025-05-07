@@ -51,6 +51,7 @@ def create_profile(profile: NewUser) -> Profile:
 
 @router.get("/profile/{id}", response_model=Profile)
 def get_profile(user_id: int):
+
     try:
         with db.engine.begin() as connection:
             user = connection.execute(
