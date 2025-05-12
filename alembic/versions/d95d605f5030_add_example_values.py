@@ -32,17 +32,6 @@ def upgrade() -> None:
     op.execute("""INSERT INTO users (name, username, email, permissions) VALUES ('Bob', 'SpongeBob2Loco', 'bob12@calpoly.edu', 1)""")
     op.execute("""INSERT INTO users (name, username, email, permissions) VALUES ('Dave', 'D_ave', 'dave#calpoly.edu', 1)""")
 
-    op.execute("""INSERT INTO user_preferences (user_id, preference_id) VALUES (1, 1)""")
-    op.execute("""INSERT INTO user_preferences (user_id, preference_id) VALUES (2, 2)""")
-
-    op.execute("""INSERT INTO restaurants (name, cuisine_id, address, city, state, zipcode, phone, last_updated_by) VALUES ('El Guero', 1, '1122 Chorro St', 'San Luis Obispo', 'CA', '93401', '805-540-4637', 1)""")
-    op.execute("""INSERT INTO restaurants (name, cuisine_id, address, city, state, zipcode, phone, last_updated_by) VALUES ('Panda Express', 2, '789 Foothill Blvd', 'San Luis Obispo', 'CA', '93405', '805-784-0355', 1)""")
-
-    op.execute("""INSERT INTO reviews (user_id, restaurant_id, cuisine_id, overall_rating, food_rating, service_rating, price_rating, cleanliness_rating, written_review) VALUES (1, 1, 1, 4.5, 5, 3, 5, 5, 'Nice')""")
-    op.execute("""INSERT INTO reviews (user_id, restaurant_id, cuisine_id, overall_rating, food_rating, service_rating, price_rating, cleanliness_rating, written_review) VALUES (1, 2, 2, 3, 4, 5, 2, 1, 'Good')""")
-
-    op.execute("""INSERT INTO restaurant_preferences (restaurant_id, preference_id, last_updated_by) VALUES (2, 1, 1)""")
-    op.execute("""INSERT INTO restaurant_preferences (restaurant_id, preference_id, last_updated_by) VALUES (1, 1, 1)""")
 
 
 
