@@ -108,6 +108,7 @@ def update_profile(user_id: int, payload: ProfileUpdate):
     return user
 
 
+
 @router.get("/users/recommendations", response_model=List[RestaurantRecommendation])
 def get_preference_recc_id(user_id: int, limit: int) -> List[RestaurantRecommendation]:
     restaurants: List[RestaurantRecommendation] = []

@@ -21,6 +21,7 @@ class Cuisine(BaseModel):
     name: str
 
 
+
 @router.post("/cuisines/create", response_model=Cuisine)
 def create_cuisine(cuisine: NewCuisine) -> Cuisine:
     try:

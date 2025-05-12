@@ -161,3 +161,4 @@ def update_review(restaurant_id: int, user_id: int, payload: ReviewUpdate):
         )
     except sqlalchemy.exc.IntegrityError:
         raise HTTPException(status_code=409, detail="Error updating review")
+

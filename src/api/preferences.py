@@ -6,6 +6,7 @@ import sqlalchemy
 from src import database as db
 
 
+
 router = APIRouter(
     prefix="/preferences",
     tags=["preferences"],
