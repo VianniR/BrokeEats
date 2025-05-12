@@ -119,10 +119,20 @@ def update_review(restaurant_id: int, user_id: int, payload: ReviewUpdate):
     updates = payload.model_dump(exclude_unset=True)
     updates = {k: v for k, v in updates.items() if not (isinstance(v, str) and v.strip() == "")}
     
+    # Map payload fields to actual DB column names
+    column_map = {
+        "overall": "overall_rating",
+        "food": "food_rating",
+        "service": "service_rating",
+        "price": "price_rating",
+        "cleanliness": "cleanliness_rating",
+        "note": "written_review"
+    }
+    
     if not updates:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No fields provided for update")
     
-    set_clauses = ", ".join(f"{field} = :{field}" for field in updates.keys())
+    set_clauses = ", ".join(f"{column_map[field]} = :{field}" for field in updates.keys())
     params = {**updates, "restaurant_id": restaurant_id, "user_id": user_id}
     try:
         with db.engine.begin() as conn:
