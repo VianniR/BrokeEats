@@ -22,6 +22,16 @@ class Review(BaseModel):
     note: Optional[str] = Field(None, example = "Great Place")
 
 
+# ReviewUpdate schema for PATCH endpoint
+class ReviewUpdate(BaseModel):
+    overall: Optional[float] = Field(None, example=4.5)
+    food: Optional[float] = Field(None, example=4.0)
+    service: Optional[float] = Field(None, example=5.0)
+    price: Optional[float] = Field(None, example=3.5)
+    cleanliness: Optional[float] = Field(None, example=4.0)
+    note: Optional[str] = Field(None, example="Updated review text")
+
+
 
 @router.post("/reviews", response_model = Review)
 def create_review(review : Review):
@@ -100,4 +110,49 @@ def delete_review(restaurant_id:int, user_id:int ):
                         )
     except sqlalchemy.exc.IntegrityError:
         raise HTTPException(status_code = 409, detail = "Review does not exitst ")
+
+
+# PATCH endpoint for updating a review
+@router.patch("/{restaurant_id}/{user_id}", response_model=Review)
+def update_review(restaurant_id: int, user_id: int, payload: ReviewUpdate):
+    """Updates any provided fields of a review."""
+    updates = payload.model_dump(exclude_unset=True)
+    updates = {k: v for k, v in updates.items() if not (isinstance(v, str) and v.strip() == "")}
     
+    if not updates:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No fields provided for update")
+    
+    set_clauses = ", ".join(f"{field} = :{field}" for field in updates.keys())
+    params = {**updates, "restaurant_id": restaurant_id, "user_id": user_id}
+    try:
+        with db.engine.begin() as conn:
+            conn.execute(
+                sqlalchemy.text(
+                    f"UPDATE reviews SET {set_clauses} WHERE restaurant_id = :restaurant_id AND user_id = :user_id"
+                ),
+                params
+            )
+            row = conn.execute(
+                sqlalchemy.text(
+                    """
+                    SELECT user_id, restaurant_id, cuisine_id, overall_rating, food_rating, service_rating,
+                           price_rating, cleanliness_rating, written_review
+                    FROM reviews
+                    WHERE restaurant_id = :restaurant_id AND user_id = :user_id
+                    """
+                ),
+                {"restaurant_id": restaurant_id, "user_id": user_id}
+            ).one()
+        return Review(
+            user_id=row.user_id,
+            restaurant_id=row.restaurant_id,
+            cuisine_id=row.cuisine_id,
+            overall=row.overall_rating,
+            food=row.food_rating,
+            service=row.service_rating,
+            price=row.price_rating,
+            cleanliness=row.cleanliness_rating,
+            note=row.written_review
+        )
+    except sqlalchemy.exc.IntegrityError:
+        raise HTTPException(status_code=409, detail="Error updating review")
