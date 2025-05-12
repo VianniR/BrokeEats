@@ -127,3 +127,21 @@ def update_restaurant(restaurant_id: int, payload: RestaurantUpdate):
         )
     except sqlalchemy.exc.IntegrityError:
         raise HTTPException(status_code=409, detail = "Error updating restaurant")
+    
+
+
+@router.patch("/restaurants/delete/{restaurant_id}", status_code = status.HTTP_204_NO_CONTENT)
+def delete_restaurant(restaurant_id: int):
+    try:
+        with db.engine.begin() as conn:
+            conn.execute(
+                sqlalchemy.text("""
+                                DELETE FROM restaurants
+                                WHERE id = :id
+                            """),
+                              {
+                                "id": restaurant_id
+                            }
+            )
+    except sqlalchemy.exc.IntegrityError:
+        raise HTTPException(status_code = 409, detail = "Restaurant does not exist")
