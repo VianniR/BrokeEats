@@ -1,6 +1,7 @@
 Carol wants to discover new restaurants in San Luis Obispo.
 
 First, Carol gets the list of restaurants by calling GET/users/reccomendations Output: JSON with filtered data
+After seeing the restaurants, she decides she wants to eat Mexican food. She filters by calling restaurant/filter 
 Carol reads the most recent reviews by calling GET/reviews/{restaurantId} Output: JSON with review objects
 
 curl -X 'GET' \
@@ -40,6 +41,41 @@ Response:
     "service_rating": 5,
     "price_rating": 2,
     "cleanliness_rating": 1
+  }
+]
+
+curl -X 'POST' \
+  'https://brokeeats.onrender.com/restaurants/filter?limit=2' \
+  -H 'accept: application/json' \
+  -H 'access_token: brat' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "city": "San Luis Obispo",
+  "state": "CA",
+  "overall_rating": 3,
+  "food_rating": 3,
+  "service_rating": 3,
+  "price_rating": 3,
+  "cleanliness_rating": 3,
+  "cuisine_name": "mexican"
+}'
+
+Response:
+[
+  {
+    "id": 1,
+    "name": "El Guero",
+    "cuisine": "mexican",
+    "address": "1122 Chorro St",
+    "city": "San Luis Obispo",
+    "state": "CA",
+    "zipcode": "93401",
+    "phone": "805-540-4637",
+    "overall_score": 4.5,
+    "food_rating": 5,
+    "service_rating": 3,
+    "price_rating": 5,
+    "cleanliness_rating": 5
   }
 ]
 

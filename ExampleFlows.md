@@ -14,6 +14,7 @@ Bob is signing up for BrokeEats and wants to set a gluten-free dietary preferenc
 Carol wants to discover new restaurants in San Luis Obispo.
 
 First, Carol gets the list of restaurants by calling GET/users/reccomendations Output: JSON with filtered data
+After seeing the restaurants, she decides she wants to eat Mexican food. She filters by calling restaurant/filter 
 Carol reads the most recent reviews by calling GET/reviews/{restaurantId} Output: JSON with review objects
 
 Dave is a food critic that wants to post a review, change it after trying a weekday deal, and then remove it when he changes his mind
