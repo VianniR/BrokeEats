@@ -8,6 +8,7 @@ from datetime import datetime
 
 from src.api.users import RestaurantRecommendation
 
+
 router = APIRouter(prefix="/restaurants",
                   tags=["restaurants"],
                    dependencies=[Depends(auth.get_api_key)])
