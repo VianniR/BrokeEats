@@ -11,11 +11,10 @@ Bob is signing up for BrokeEats and wants to set a gluten-free dietary preferenc
 - Bob then changes his display name using PATCH/profiles. 
 - Bob then adds a food preference using POST/profiles/preferences and adds “gluten free” to his dietary preferences
 
-Carol wants to discover highly-rated Italian spots under $20 and read recent reviews
+Carol wants to discover new restaurants in San Luis Obispo.
 
-- First, Carol gets the list of restaurants that fit her filters by calling GET/restaurants and setting budget to a max of $20 and the minimum rating to 4 stars **Output**: JSON with filtered data
-- Carol then checks the details of her top pick using GET/restaurants/{restaurantId}  **Output**: JSON with restaurant data
-- Carol reads the most recent reviews by calling GET/restaurants/{restaurantId}/reviews  **Output**: JSON with review objects
+First, Carol gets the list of restaurants by calling GET/users/reccomendations Output: JSON with filtered data
+Carol reads the most recent reviews by calling GET/reviews/{restaurantId} Output: JSON with review objects
 
 Dave is a food critic that wants to post a review, change it after trying a weekday deal, and then remove it when he changes his mind
 
