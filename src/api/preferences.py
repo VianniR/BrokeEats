@@ -6,6 +6,7 @@ import sqlalchemy
 from src import database as db
 
 
+
 router = APIRouter(
     prefix="/preferences",
     tags=["preferences"],
@@ -65,7 +66,7 @@ def get_preferences() -> List[Preferences]:
 @router.post("/profiles/get_preferences/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def add_user_preference(preference_name: str, user_id: int):
     with db.engine.begin() as conn:
-        '''name_found = conn.execute(
+        name_found = conn.execute(
             sqlalchemy.text("""
         SELECT preferences.name
         from preferences
@@ -95,7 +96,6 @@ def add_user_preference(preference_name: str, user_id: int):
         ).scalar_one_or_none()
         if id_found is None:
             raise HTTPException(status_code=404, detail="user does not exist")
-        '''
 
         try:
             conn.execute(
@@ -136,11 +136,11 @@ def get_user_preferences(user_id: int) -> List[Preferences]:
 
 
 
-@router.post("/restaurants/{restaurant_id}", status_code=status.HTTP_201_CREATED)
+@router.post("/restaurants/{restaurant_id}", status_code=status.HTTP_204_NO_CONTENT)
 def add_restaurant_preference(restaurant_id: int, preference_name: str, user_id: int):
     with db.engine.begin() as conn:
 
-        '''name_found = conn.execute(
+        name_found = conn.execute(
             sqlalchemy.text("""
                 SELECT preferences.name
                 from preferences
@@ -186,7 +186,7 @@ def add_restaurant_preference(restaurant_id: int, preference_name: str, user_id:
 
         if id_found is None:
             raise HTTPException(status_code=404, detail="restaurant does not exist")
-        '''
+
 
         try:
             conn.execute(

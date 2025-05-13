@@ -13,7 +13,6 @@ router = APIRouter(prefix="/reviews",
 class Review(BaseModel):
     user_id: int
     restaurant_id: int
-    cuisine_id: int
     overall: float
     food: Optional[float] = None
     service: Optional[float] = None
@@ -29,7 +28,7 @@ class ReviewUpdate(BaseModel):
     service: Optional[float] = Field(None, example=5.0)
     price: Optional[float] = Field(None, example=3.5)
     cleanliness: Optional[float] = Field(None, example=4.0)
-    note: Optional[str] = Field(None, example="Updated review text")
+    note: Optional[str] = Field(None, example='')
 
 
 
@@ -38,14 +37,13 @@ def create_review(review : Review):
     try:
         with db.engine.begin() as conn:
             rev = conn.execute(sqlalchemy.text("""
-            INSERT INTO reviews (user_id, restaurant_id, cuisine_id, overall_rating, food_rating, service_rating, price_rating, cleanliness_rating, written_review )
-            VALUES (:user, :restaurant, :cuisine,:overall, :food, :service, :price, :cleanliness, :written)
+            INSERT INTO reviews (user_id, restaurant_id, overall_rating, food_rating, service_rating, price_rating, cleanliness_rating, written_review )
+            VALUES (:user, :restaurant,:overall, :food, :service, :price, :cleanliness, :written)
             RETURNING id;                                   
             """), 
                  {
                       "user": review.user_id,
                       "restaurant": review.restaurant_id,
-                      "cuisine": review.cuisine_id,
                       "overall": review.overall,
                       "food": review.food,
                       "service": review.service,
@@ -61,7 +59,6 @@ def create_review(review : Review):
     return Review(
         user_id=review.user_id,
         restaurant_id=review.restaurant_id,
-        cuisine_id=review.cuisine_id,
         overall=review.overall,
         food=review.food,
         service=review.service,
@@ -75,7 +72,7 @@ def get_reviews(restaurant_id: int):
     reviews = []
     with db.engine.begin() as conn:
         revs = conn.execute(
-            sqlalchemy.text("""SELECT user_id, restaurant_id, cuisine_id, overall_rating, food_rating, service_rating, price_rating, cleanliness_rating, written_review 
+            sqlalchemy.text("""SELECT user_id, restaurant_id, overall_rating, food_rating, service_rating, price_rating, cleanliness_rating, written_review 
                                 FROM reviews
                                 WHERE restaurant_id = :restaurant_id
                             """), {"restaurant_id" : restaurant_id}
@@ -84,7 +81,6 @@ def get_reviews(restaurant_id: int):
             reviews.append(Review(
             user_id=review.user_id,
             restaurant_id=review.restaurant_id,
-            cuisine_id=review.cuisine_id,
             overall=review.overall_rating,
             food=review.food_rating,
             service=review.service_rating,
@@ -145,7 +141,7 @@ def update_review(restaurant_id: int, user_id: int, payload: ReviewUpdate):
             row = conn.execute(
                 sqlalchemy.text(
                     """
-                    SELECT user_id, restaurant_id, cuisine_id, overall_rating, food_rating, service_rating,
+                    SELECT user_id, restaurant_id, overall_rating, food_rating, service_rating,
                            price_rating, cleanliness_rating, written_review
                     FROM reviews
                     WHERE restaurant_id = :restaurant_id AND user_id = :user_id
@@ -156,7 +152,6 @@ def update_review(restaurant_id: int, user_id: int, payload: ReviewUpdate):
         return Review(
             user_id=row.user_id,
             restaurant_id=row.restaurant_id,
-            cuisine_id=row.cuisine_id,
             overall=row.overall_rating,
             food=row.food_rating,
             service=row.service_rating,
@@ -166,3 +161,4 @@ def update_review(restaurant_id: int, user_id: int, payload: ReviewUpdate):
         )
     except sqlalchemy.exc.IntegrityError:
         raise HTTPException(status_code=409, detail="Error updating review")
+
