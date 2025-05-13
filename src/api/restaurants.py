@@ -6,6 +6,8 @@ import sqlalchemy
 from src import database as db
 from datetime import datetime
 
+from src.api.users import RestaurantRecommendation
+
 router = APIRouter(prefix="/restaurants",
                   tags=["restaurants"],
                    dependencies=[Depends(auth.get_api_key)])
@@ -32,6 +34,17 @@ class RestaurantUpdate(BaseModel):
     phone: Optional[str] = None
     last_updated_by: int
     last_updated_at: datetime
+
+class RestaurantFilter(BaseModel):
+    city: str
+    state: str
+    overall_rating: Optional[float] = Field(default=0, ge=0.0, le= 5.0)
+    food_rating: Optional[float] = Field(default=None, ge=0.0, le= 5.0)
+    service_rating: Optional[float] = Field(default=None, ge=0.0, le= 5.0)
+    price_rating: Optional[float] = Field(default=None, ge=0.0, le= 5.0)
+    cleanliness_rating: Optional[float] = Field(default=None, ge=0.0, le= 5.0)
+    cuisine_name: Optional[str] = Field(None, example = '')
+
 
 
 @router.post("/restaurants", response_model = Restaurant)
@@ -145,3 +158,73 @@ def delete_restaurant(restaurant_id: int):
             )
     except sqlalchemy.exc.IntegrityError:
         raise HTTPException(status_code = 409, detail = "Restaurant does not exist")
+
+
+@router.post("/filter", response_model=List[RestaurantRecommendation])
+def filter_restaurants(payload: RestaurantFilter, limit: int = 100):
+    restaurant_reccs: List[RestaurantRecommendation] = []
+
+    updates = payload.model_dump(exclude_unset=True)
+    updates = {k: v for k, v in updates.items() if not (isinstance(v, str) and v.strip() == "")}
+
+    # Map payload fields to actual DB column names
+    column_map = {
+        "city": "restaurants.city",
+        "state": "restaurants.state",
+        "cuisine_name": "cuisines.name",
+
+    }
+    avg_column_map = {
+        "overall_rating": "AVG(reviews.overall_rating)",
+        "price_rating": "AVG(reviews.price_rating)",
+        "cleanliness_rating": "AVG(reviews.cleanliness_rating)",
+        "food_rating": "AVG(reviews.food_rating)",
+        "service_rating": "AVG(reviews.service_rating)",
+    }
+
+
+
+    set_clauses = []
+    having_clauses = []
+    for field, value in updates.items():
+        if field in avg_column_map:
+            having_clauses.append(f"{avg_column_map[field]} >= :{field}")
+        elif field in column_map:
+            set_clauses.append(f"{column_map[field]} = :{field}")
+
+    if not set_clauses and not having_clauses:
+        raise HTTPException(status_code=404, detail="No filters found")
+    where_sql = " AND ".join(set_clauses) or "TRUE"
+    having_sql = " AND ".join(having_clauses)
+    params = {**updates, "limit": limit}
+
+    with db.engine.connect() as conn:
+        row = conn.execute(sqlalchemy.text(f"""
+        SELECT restaurants.id as id, 
+        restaurants.name as name, 
+        cuisines.name as cuisine, 
+        restaurants.address as address, 
+        restaurants.city as city, 
+        restaurants.state as state, 
+        restaurants.zipcode as zipcode, 
+        restaurants.phone as phone, 
+        AVG(reviews.overall_rating) AS overall_score,
+        AVG(reviews.food_rating) AS food_rating,
+        AVG(reviews.service_rating) AS service_rating,
+        AVG(reviews.price_rating) AS price_rating,
+        AVG(reviews.cleanliness_rating) AS cleanliness_rating
+        FROM restaurants
+        JOIN cuisines ON cuisines.id = restaurants.cuisine_id
+        JOIN reviews ON reviews.restaurant_id = restaurants.id
+        WHERE {where_sql}
+        GROUP BY restaurants.id, restaurants.name,cuisines.name, restaurants.city, restaurants.state, restaurants.zipcode, restaurants.phone
+        {f'HAVING {having_sql}' if having_sql else ''}
+        ORDER BY overall_score DESC, price_rating DESC
+        limit :limit
+        """),
+                                   params)
+
+        for r in row:
+            restaurant_reccs.append(RestaurantRecommendation(**r._mapping))
+
+    return restaurant_reccs
