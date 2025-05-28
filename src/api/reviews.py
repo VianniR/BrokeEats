@@ -35,18 +35,17 @@ class filteredReview(BaseModel):
     user_id: Optional[int] = None
     cuisine_id: Optional[int] = None
     overall_rating: Optional[float] = Field(default=None, ge=0.0, le=5.0)
-    price_rating: Optional[float] = Field(default=None, ge=0.0, le=5.0)
-    service_rating: Optional[float] = Field(default=None, ge=0.0, le=5.0)
-    cleanliness_rating: Optional[float] = Field(default=None, ge=0.0, le=5.0)
     food_rating: Optional[float] = Field(default=None, ge=0.0, le=5.0)
-
+    service_rating: Optional[float] = Field(default=None, ge=0.0, le=5.0)
+    price_rating: Optional[float] = Field(default=None, ge=0.0, le=5.0)
+    cleanliness_rating: Optional[float] = Field(default=None, ge=0.0, le=5.0)
+    
 
 class RecsReview(BaseModel):
     restaurant_id: int
     user_id: int
-    cuisine_id: str
-    address: str
-    overall_score: Optional[float]
+    cuisine_id: int
+    overall_rating: Optional[float]
     food_rating: Optional[float]
     service_rating: Optional[float]
     price_rating: Optional[float]
@@ -186,6 +185,7 @@ def update_review(restaurant_id: int, user_id: int, payload: ReviewUpdate):
     
 @router.post("/filter/", response_model = List[RecsReview])
 def filter_review(payload: filteredReview, limit: int = 25):
+
     conditions = payload.model_dump(exclude_unset = True)
     conditions = {k: v for k, v in conditions.items() if not (isinstance(v, str) and v.strip() == "")}
 
@@ -214,15 +214,15 @@ def filter_review(payload: filteredReview, limit: int = 25):
 
     with db.engine.begin() as conn:
         filters = conn.execute(sqlalchemy.text(f"""
-                SELECT  restaurants.id as restaurant_id,
-                        users.id as user_id,
-                        cuisines.id as cuisine_id,
-                        overall_rating as overall,
-                        food_rating as food,
-                        service_rating as service,
-                        price_rating as price,
-                        cleanliness_rating as cleanliness,
-                        written_review as written
+                SELECT  restaurants.id,
+                        users.id,
+                        cuisines.id,
+                        overall_rating,
+                        food_rating,
+                        service_rating,
+                        price_rating,
+                        cleanliness_rating,
+                        written_review
                 FROM reviews
                 JOIN restaurants ON restaurants.id = reviews.restaurant_id
                 JOIN users ON users.id = reviews.user_id
