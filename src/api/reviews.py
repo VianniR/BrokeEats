@@ -30,7 +30,17 @@ class ReviewUpdate(BaseModel):
     cleanliness: Optional[float] = Field(None, example=4.0)
     note: Optional[str] = Field(None, example='')
 
+class filteredReview(BaseModel):
+    restaurant_id: Optional[int] = None
+    user_id: Optional[int] = None
+    cuisine_id: Optional[int] = None
+    overall_rating: Optional[float] = Field(default=None, ge=0.0, le=5.0)
+    price_rating: Optional[float] = Field(default=None, ge=0.0, le=5.0)
+    service_rating: Optional[float] = Field(default=None, ge=0.0, le=5.0)
+    cleanliness_rating: Optional[float] = Field(default=None, ge=0.0, le=5.0)
+    food_rating: Optional[float] = Field(default=None, ge=0.0, le=5.0)
 
+    
 
 @router.post("/reviews", response_model = Review)
 def create_review(review : Review):
@@ -91,7 +101,7 @@ def get_reviews(restaurant_id: int):
 
     return reviews
 
-@router.patch("/reviews/delete/{restaurant_id}/{user_id}", status_code = status.HTTP_204_NO_CONTENT)
+@router.delete("/reviews/delete/{restaurant_id}/{user_id}", status_code = status.HTTP_204_NO_CONTENT)
 def delete_review(restaurant_id:int, user_id:int ):
     try:
         with db.engine.begin() as conn:
@@ -161,4 +171,57 @@ def update_review(restaurant_id: int, user_id: int, payload: ReviewUpdate):
         )
     except sqlalchemy.exc.IntegrityError:
         raise HTTPException(status_code=409, detail="Error updating review")
+    
+@router.post("/filter/", response_model = List[Review])
+def filter_review(payload: filteredReview, limit: int = 25):
+    conditions = payload.model_dump(exclude_unset = True)
+    conditions = {k: v for k, v in conditions.items() if not (isinstance(v, str) and v.strip() == "")}
 
+    column_map = {
+        "restaurant_id": "restaurant_id",
+        "user_id": "user_id",
+        "cuisine_id": "cuisine_id",
+        "overall": "overall_rating",
+        "food": "food_rating",
+        "service": "service_rating",
+        "price": "price_rating",
+        "cleanliness": "cleanliness_rating",
+        "note": "written_review"
+}
+    where_clauses = []
+    for field, value in conditions.items():
+        if field in column_map:
+            where_clauses.append(f"{column_map[field]} >= :{field}")
+    if not where_clauses:
+        raise HTTPException(status_code=404, detail="No filters found")
+    
+    where_SQL = " AND ".join(where_clauses)
+    params = {**conditions, "limit": limit}
+
+    filtered: List[Review] = []
+
+    with db.engine.begin() as conn:
+        filters = conn.execute(sqlalchemy.text(f"""
+                SELECT  restaurants.id,
+                        users.id,
+                        cuisines.id,
+                        overall_rating,
+                        food_rating,
+                        service_rating,
+                        price_rating,
+                        cleanliness_rating,
+                        written_review
+                FROM reviews
+                JOIN restaurants ON restaurants.id = reviews.restaurant_id
+                JOIN users ON users.id = reviews.user_id
+                JOIN cuisines ON cuisines.id = restaurants.cuisine_id
+                WHERE {where_SQL}
+                ORDER BY overall_rating DESC, price_rating DESC, food_rating DESC
+                limit :limit                               
+            """),
+                params
+            )
+        for f in filters:
+            filtered.append(Review(**f._mapping))
+
+    return filtered
