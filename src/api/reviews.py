@@ -40,6 +40,18 @@ class filteredReview(BaseModel):
     cleanliness_rating: Optional[float] = Field(default=None, ge=0.0, le=5.0)
     food_rating: Optional[float] = Field(default=None, ge=0.0, le=5.0)
 
+
+class RecsReview(BaseModel):
+    restaurant_id: int
+    user_id: int
+    cuisine_id: str
+    address: str
+    overall_score: Optional[float]
+    food_rating: Optional[float]
+    service_rating: Optional[float]
+    price_rating: Optional[float]
+    cleanliness_rating: Optional[float]
+    written_review: Optional[str]
     
 
 @router.post("/reviews", response_model = Review)
@@ -172,7 +184,7 @@ def update_review(restaurant_id: int, user_id: int, payload: ReviewUpdate):
     except sqlalchemy.exc.IntegrityError:
         raise HTTPException(status_code=409, detail="Error updating review")
     
-@router.post("/filter/", response_model = List[Review])
+@router.post("/filter/", response_model = List[RecsReview])
 def filter_review(payload: filteredReview, limit: int = 25):
     conditions = payload.model_dump(exclude_unset = True)
     conditions = {k: v for k, v in conditions.items() if not (isinstance(v, str) and v.strip() == "")}
@@ -181,12 +193,12 @@ def filter_review(payload: filteredReview, limit: int = 25):
         "restaurant_id": "restaurant_id",
         "user_id": "user_id",
         "cuisine_id": "cuisine_id",
-        "overall": "overall_rating",
-        "food": "food_rating",
-        "service": "service_rating",
-        "price": "price_rating",
-        "cleanliness": "cleanliness_rating",
-        "note": "written_review"
+        "overall_rating": "overall_rating",
+        "food_rating": "food_rating",
+        "service_rating": "service_rating",
+        "price_rating": "price_rating",
+        "cleanliness_rating": "cleanliness_rating",
+        
 }
     where_clauses = []
     for field, value in conditions.items():
@@ -198,19 +210,19 @@ def filter_review(payload: filteredReview, limit: int = 25):
     where_SQL = " AND ".join(where_clauses)
     params = {**conditions, "limit": limit}
 
-    filtered: List[Review] = []
+    filtered: List[RecsReview] = []
 
     with db.engine.begin() as conn:
         filters = conn.execute(sqlalchemy.text(f"""
-                SELECT  restaurants.id,
-                        users.id,
-                        cuisines.id,
-                        overall_rating,
-                        food_rating,
-                        service_rating,
-                        price_rating,
-                        cleanliness_rating,
-                        written_review
+                SELECT  restaurants.id as restaurant_id,
+                        users.id as user_id,
+                        cuisines.id as cuisine_id,
+                        overall_rating as overall,
+                        food_rating as food,
+                        service_rating as service,
+                        price_rating as price,
+                        cleanliness_rating as cleanliness,
+                        written_review as written
                 FROM reviews
                 JOIN restaurants ON restaurants.id = reviews.restaurant_id
                 JOIN users ON users.id = reviews.user_id
@@ -222,6 +234,6 @@ def filter_review(payload: filteredReview, limit: int = 25):
                 params
             )
         for f in filters:
-            filtered.append(Review(**f._mapping))
+            filtered.append(RecsReview(**f._mapping))
 
     return filtered
