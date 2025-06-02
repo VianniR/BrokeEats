@@ -4,6 +4,7 @@ from typing import List, Optional
 from src.api import auth
 import sqlalchemy
 from src import database as db
+from datetime import datetime
 
 router = APIRouter(prefix="/reviews",
                   tags=["reviews"],
@@ -13,12 +14,14 @@ router = APIRouter(prefix="/reviews",
 class Review(BaseModel):
     user_id: int
     restaurant_id: int
-    overall: float
-    food: Optional[float] = None
-    service: Optional[float] = None
-    price: Optional[float] = None
-    cleanliness: Optional[float] = None
+    cuisine_id: int
+    overall: float = Field(ge = 0.0, le = 5.0)
+    food: Optional[float] = Field(None, ge = 0.0, le = 5.0)
+    service: Optional[float] = Field(None, ge = 0.0, le = 5.0)
+    price: Optional[float] = Field(None, ge = 0.0, le = 5.0)
+    cleanliness: Optional[float] = Field(None, ge = 0.0, le = 5.0)
     note: Optional[str] = Field(None, example = "Great Place")
+    created_at: datetime 
 
 
 # ReviewUpdate schema for PATCH endpoint
@@ -33,7 +36,7 @@ class ReviewUpdate(BaseModel):
 class filteredReview(BaseModel):
     restaurant_id: Optional[int] = None
     user_id: Optional[int] = None
-    name: Optional[str] = None
+    cuisine_name: Optional[str] = None
     overall_rating: Optional[float] = Field(default=0.0, ge=0.0, le=5.0)
     food_rating: Optional[float] = Field(default=0.0, ge=0.0, le=5.0)
     service_rating: Optional[float] = Field(default=0.0, ge=0.0, le=5.0)
@@ -44,7 +47,7 @@ class filteredReview(BaseModel):
 class RecsReview(BaseModel):
     restaurant_id: int
     user_id: int
-    name: str
+    cuisine_name: str
     overall_rating: Optional[float]
     food_rating: Optional[float]
     service_rating: Optional[float]
@@ -55,78 +58,101 @@ class RecsReview(BaseModel):
 
 @router.post("", response_model = Review)
 def create_review(review : Review):
-    try:
-        with db.engine.begin() as conn:
-            rev = conn.execute(sqlalchemy.text("""
-            INSERT INTO reviews (user_id, restaurant_id, overall_rating, food_rating, service_rating, price_rating, cleanliness_rating, written_review )
-            VALUES (:user, :restaurant,:overall, :food, :service, :price, :cleanliness, :written)
-            RETURNING id;                                   
-            """), 
-                 {
-                      "user": review.user_id,
-                      "restaurant": review.restaurant_id,
-                      "overall": review.overall,
-                      "food": review.food,
-                      "service": review.service,
-                      "price": review.price,
-                      "cleanliness": review.cleanliness,
-                      "written": review.note
-                 }
-            ).scalar()
-        
-    except sqlalchemy.exc.IntegrityError:
-        raise HTTPException(status_code = 404, detail = "Review from that user already exists for this restaurant")
+     
     
+    with db.engine.begin() as conn:
+        existing = conn.execute(
+            sqlalchemy.text("""
+                SELECT 1 FROM reviews 
+                WHERE user_id = :user_id AND restaurant_id = :restaurant_id
+            """),
+            {"user_id": review.user_id, "restaurant_id": review.restaurant_id}
+        ).fetchone()
+
+        if existing:
+            raise HTTPException(
+                status_code=409,
+                detail="Review from that user already exists for this restaurant"
+            )
+        
+        rev = conn.execute(sqlalchemy.text("""
+        INSERT INTO reviews (user_id, restaurant_id, cuisine_id, overall_rating, food_rating, service_rating, price_rating, cleanliness_rating, written_review, created_at)
+        VALUES (:user, :restaurant, :cuisine_id, :overall, :food, :service, :price, :cleanliness, :written, :created_at)
+        RETURNING id;                                   
+        """), 
+                {
+                    "user": review.user_id,
+                    "restaurant": review.restaurant_id,
+                    "cuisine_id": review.cuisine_id,
+                    "overall": review.overall,
+                    "food": review.food,
+                    "service": review.service,
+                    "price": review.price,
+                    "cleanliness": review.cleanliness,
+                    "written": review.note,
+                    "created_at": review.created_at
+                }
+        ).scalar_one_or_none()
+  
     return Review(
         user_id=review.user_id,
         restaurant_id=review.restaurant_id,
+        cuisine_id = review.cuisine_id,
         overall=review.overall,
         food=review.food,
         service=review.service,
         price=review.price,
         cleanliness=review.cleanliness,
-        note=review.note
+        note=review.note,
+        created_at = review.created_at
+    
     )
+
 
 @router.get("/{restaurant_id}", response_model = List[Review])
 def get_reviews(restaurant_id: int):
     reviews = []
     with db.engine.begin() as conn:
         revs = conn.execute(
-            sqlalchemy.text("""SELECT user_id, restaurant_id, overall_rating, food_rating, service_rating, price_rating, cleanliness_rating, written_review 
+            sqlalchemy.text("""SELECT user_id, restaurant_id, cuisine_id, overall_rating, food_rating, service_rating, price_rating, cleanliness_rating, written_review, created_at
                                 FROM reviews
                                 WHERE restaurant_id = :restaurant_id
                             """), {"restaurant_id" : restaurant_id}
-                            )
-        for review in revs:
-            reviews.append(Review(
+                            ).fetchall() 
+    
+
+    for review in revs:
+        reviews.append(Review(
             user_id=review.user_id,
             restaurant_id=review.restaurant_id,
+            cuisine_id = review.cuisine_id,
             overall=review.overall_rating,
             food=review.food_rating,
             service=review.service_rating,
             price=review.price_rating,
             cleanliness=review.cleanliness_rating,
-            note=review.written_review
-            ))
+            note=review.written_review,
+            created_at=review.created_at  
+        ))
 
     return reviews
 
 @router.delete("/delete/{restaurant_id}/{user_id}", status_code = status.HTTP_204_NO_CONTENT)
 def delete_review(restaurant_id:int, user_id:int ):
-    try:
-        with db.engine.begin() as conn:
-            conn.execute(
-                        sqlalchemy.text(""" 
-                                        DELETE FROM reviews 
-                                        WHERE restaurant_id = :restaurant_id AND user_id = :user_id
-                                """), {
-                                        "restaurant_id": restaurant_id,
-                                        "user_id": user_id
-                                    }
-                        )
-    except sqlalchemy.exc.IntegrityError:
-        raise HTTPException(status_code = 409, detail = "Review does not exitst ")
+    
+    with db.engine.begin() as conn:
+        rev = conn.execute(
+                    sqlalchemy.text(""" 
+                                    DELETE FROM reviews 
+                                    WHERE restaurant_id = :restaurant_id AND user_id = :user_id
+                                    RETURNING id
+                            """), {
+                                    "restaurant_id": restaurant_id,
+                                    "user_id": user_id
+                                }
+                    ).scalar_one_or_none()
+    if rev is None:
+        raise HTTPException(status_code = 404, detail = "Review does not exist ")
 
 
 # PATCH endpoint for updating a review
@@ -186,7 +212,6 @@ def update_review(restaurant_id: int, user_id: int, payload: ReviewUpdate):
 @router.post("/filter/", response_model = List[RecsReview])
 def filter_review(payload: filteredReview, limit: int = 25):
 
-    conditions = payload.model_dump(exclude_unset = True)
     conditions = {
     k: v for k, v in payload.model_dump(exclude_unset=True).items()
     if not (
@@ -199,7 +224,7 @@ def filter_review(payload: filteredReview, limit: int = 25):
     column_map = {
         "restaurant_id": "restaurant_id",
         "user_id": "user_id",
-        "name": "cuisines.name",
+        "cuisine_name": "cuisines.name",
         "overall_rating": "overall_rating",
         "food_rating": "food_rating",
         "service_rating": "service_rating",
@@ -209,8 +234,11 @@ def filter_review(payload: filteredReview, limit: int = 25):
 }
     where_clauses = []
     for field, value in conditions.items():
-        if field in column_map:    
-            if field in {"restaurant_id", "user_id", "name"}:
+         if field in column_map:
+            if field == "cuisine_name":
+                where_clauses.append(f"{column_map[field]} ILIKE :{field}")
+                conditions[field] = f"%{value}%"
+            elif field in {"restaurant_id", "user_id"}:
                 where_clauses.append(f"{column_map[field]} = :{field}")
             else:
                 where_clauses.append(f"{column_map[field]} >= :{field}")
@@ -224,9 +252,9 @@ def filter_review(payload: filteredReview, limit: int = 25):
 
     with db.engine.begin() as conn:
         filters = conn.execute(sqlalchemy.text(f"""
-                SELECT  restaurants.id as restaurant_id,
-                        users.id as user_id,
-                        cuisines.name,
+                SELECT  restaurants.id AS restaurant_id,
+                        users.id AS user_id,
+                        cuisines.name AS cuisine_name,
                         overall_rating,
                         food_rating,
                         service_rating,
@@ -243,7 +271,5 @@ def filter_review(payload: filteredReview, limit: int = 25):
             """),
                 params
             )
-        for f in filters:
-            filtered.append(RecsReview(**f._mapping))
+    return [RecsReview(**f._mapping) for f in filters]
 
-    return filtered
