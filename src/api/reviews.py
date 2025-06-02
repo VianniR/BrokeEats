@@ -15,14 +15,15 @@ class Review(BaseModel):
     user_id: int
     restaurant_id: int
     cuisine_id: int
-    overall: float = Field(ge = 0.0, le = 5.0)
-    food: Optional[float] = Field(None, ge = 0.0, le = 5.0)
-    service: Optional[float] = Field(None, ge = 0.0, le = 5.0)
-    price: Optional[float] = Field(None, ge = 0.0, le = 5.0)
-    cleanliness: Optional[float] = Field(None, ge = 0.0, le = 5.0)
-    note: Optional[str] = Field(None, example = "Great Place")
-    created_at: datetime 
+    overall_rating: float = Field(ge = 0.0, le = 5.0)
+    food_rating: Optional[float] = Field(None, ge = 0.0, le = 5.0)
+    service_rating: Optional[float] = Field(None, ge = 0.0, le = 5.0)
+    price_rating: Optional[float] = Field(None, ge = 0.0, le = 5.0)
+    cleanliness_rating: Optional[float] = Field(None, ge = 0.0, le = 5.0)
+    written_review: Optional[str] = Field(None, example = "Great Place")
 
+class ReviewOut(Review):
+    created_at: datetime
 
 # ReviewUpdate schema for PATCH endpoint
 class ReviewUpdate(BaseModel):
@@ -42,6 +43,7 @@ class filteredReview(BaseModel):
     service_rating: Optional[float] = Field(default=0.0, ge=0.0, le=5.0)
     price_rating: Optional[float] = Field(default=0.0, ge=0.0, le=5.0)
     cleanliness_rating: Optional[float] = Field(default=0.0, ge=0.0, le=5.0)
+
     
 
 class RecsReview(BaseModel):
@@ -56,7 +58,7 @@ class RecsReview(BaseModel):
     written_review: Optional[str]
     
 
-@router.post("", response_model = Review)
+@router.post("", response_model = ReviewOut)
 def create_review(review : Review):
      
     
@@ -76,40 +78,27 @@ def create_review(review : Review):
             )
         
         rev = conn.execute(sqlalchemy.text("""
-        INSERT INTO reviews (user_id, restaurant_id, cuisine_id, overall_rating, food_rating, service_rating, price_rating, cleanliness_rating, written_review, created_at)
-        VALUES (:user, :restaurant, :cuisine_id, :overall, :food, :service, :price, :cleanliness, :written, :created_at)
-        RETURNING id;                                   
+        INSERT INTO reviews (user_id, restaurant_id, cuisine_id, overall_rating, food_rating, service_rating, price_rating, cleanliness_rating, written_review)
+        VALUES (:user, :restaurant, :cuisine_id, :overall, :food, :service, :price, :cleanliness, :written)
+        RETURNING id, created_at                                  
         """), 
                 {
                     "user": review.user_id,
                     "restaurant": review.restaurant_id,
                     "cuisine_id": review.cuisine_id,
-                    "overall": review.overall,
-                    "food": review.food,
-                    "service": review.service,
-                    "price": review.price,
-                    "cleanliness": review.cleanliness,
-                    "written": review.note,
-                    "created_at": review.created_at
+                    "overall": review.overall_rating,
+                    "food": review.food_rating,
+                    "service": review.service_rating,
+                    "price": review.price_rating,
+                    "cleanliness": review.cleanliness_rating,
+                    "written": review.written_review,
                 }
-        ).scalar_one_or_none()
+        ).mappings().fetchone()
   
-    return Review(
-        user_id=review.user_id,
-        restaurant_id=review.restaurant_id,
-        cuisine_id = review.cuisine_id,
-        overall=review.overall,
-        food=review.food,
-        service=review.service,
-        price=review.price,
-        cleanliness=review.cleanliness,
-        note=review.note,
-        created_at = review.created_at
-    
-    )
+    return ReviewOut(**review.dict(), created_at = rev["created_at"])
 
 
-@router.get("/{restaurant_id}", response_model = List[Review])
+@router.get("/{restaurant_id}", response_model = List[ReviewOut])
 def get_reviews(restaurant_id: int):
     reviews = []
     with db.engine.begin() as conn:
@@ -122,16 +111,16 @@ def get_reviews(restaurant_id: int):
     
 
     for review in revs:
-        reviews.append(Review(
+        reviews.append(ReviewOut(
             user_id=review.user_id,
             restaurant_id=review.restaurant_id,
             cuisine_id = review.cuisine_id,
-            overall=review.overall_rating,
-            food=review.food_rating,
-            service=review.service_rating,
-            price=review.price_rating,
-            cleanliness=review.cleanliness_rating,
-            note=review.written_review,
+            overall_rating=review.overall_rating,
+            food_rating=review.food_rating,
+            service_rating=review.service_rating,
+            price_rating=review.price_rating,
+            cleanliness_rating=review.cleanliness_rating,
+            written_review=review.written_review,
             created_at=review.created_at  
         ))
 
@@ -156,7 +145,7 @@ def delete_review(restaurant_id:int, user_id:int ):
 
 
 # PATCH endpoint for updating a review
-@router.patch("/{restaurant_id}/{user_id}", response_model=Review)
+@router.patch("/{restaurant_id}/{user_id}", response_model=ReviewOut)
 def update_review(restaurant_id: int, user_id: int, payload: ReviewUpdate):
     """Updates any provided fields of a review."""
     updates = payload.model_dump(exclude_unset=True)
@@ -188,24 +177,15 @@ def update_review(restaurant_id: int, user_id: int, payload: ReviewUpdate):
             row = conn.execute(
                 sqlalchemy.text(
                     """
-                    SELECT user_id, restaurant_id, overall_rating, food_rating, service_rating,
-                           price_rating, cleanliness_rating, written_review
+                    SELECT user_id, restaurant_id, cuisine_id, overall_rating, food_rating, service_rating,
+                           price_rating, cleanliness_rating, written_review, created_at
                     FROM reviews
                     WHERE restaurant_id = :restaurant_id AND user_id = :user_id
                     """
                 ),
                 {"restaurant_id": restaurant_id, "user_id": user_id}
             ).one()
-        return Review(
-            user_id=row.user_id,
-            restaurant_id=row.restaurant_id,
-            overall=row.overall_rating,
-            food=row.food_rating,
-            service=row.service_rating,
-            price=row.price_rating,
-            cleanliness=row.cleanliness_rating,
-            note=row.written_review
-        )
+        return ReviewOut(**row._mapping)
     except sqlalchemy.exc.IntegrityError:
         raise HTTPException(status_code=409, detail="Error updating review")
     
