@@ -2,7 +2,7 @@ from typing import List
 
 import sqlalchemy
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from src import database as db
 from src.api import auth
 
@@ -12,7 +12,7 @@ router = APIRouter(prefix="/cuisines",
 
 
 class NewCuisine(BaseModel):
-    name: str
+    name: str = Field(min_length=3, max_length=20, pattern=r"^[a-zA-Z]+$", example='')
 
 
 class Cuisine(BaseModel):
@@ -21,13 +21,13 @@ class Cuisine(BaseModel):
 
 
 
-@router.post("/cuisines/create", response_model=Cuisine)
+@router.post("/", response_model=Cuisine)
 def create_cuisine(cuisine: NewCuisine) -> Cuisine:
     try:
         with db.engine.begin() as conn:
             cuisine_id = conn.execute(sqlalchemy.text("""
             INSERT INTO cuisines (name)
-            VALUES (:name)
+            VALUES (LOWER(:name))
             RETURNING id;
             """), [
                 {
@@ -37,14 +37,14 @@ def create_cuisine(cuisine: NewCuisine) -> Cuisine:
     except sqlalchemy.exc.IntegrityError:
         with db.engine.connect() as conn:
             cuisine_id = conn.execute(sqlalchemy.text("""
-            SELECT id FROM cuisines WHERE name = :name"""), [
+            SELECT id FROM cuisines WHERE LOWER(name) = LOWER(:name)"""), [
                 {
                     "name": cuisine.name,
                 }
             ]).scalar_one()
     return Cuisine(id=cuisine_id, name=cuisine.name)
 
-@router.get("/cuisines", response_model=List[Cuisine])
+@router.get("/", response_model=List[Cuisine])
 def get_cuisines() -> List[Cuisine]:
     cuisine_list = []
     with db.engine.connect() as conn:

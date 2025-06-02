@@ -114,21 +114,21 @@ def get_preference_recc_id(user_id: int, limit: int) -> List[RestaurantRecommend
     restaurants: List[RestaurantRecommendation] = []
 
     with db.engine.connect() as conn:
-        row = conn.execute(sqlalchemy.text("""
+        result = conn.execute(sqlalchemy.text("""
         SELECT DISTINCT 
-        restaurants.id, 
-        restaurants.name, 
-        cuisines.name, 
+        restaurants.id as id, 
+        restaurants.name as name, 
+        cuisines.name as cuisine, 
         address, 
         city, 
         state, 
         zipcode, 
         phone, 
-        sum(overall_rating), 
-        sum(food_rating), 
-        sum(service_rating), 
-        sum(price_rating), 
-        sum(cleanliness_rating)
+        AVG(overall_rating) as overall_score, 
+        AVG(food_rating) as food_rating, 
+        AVG(service_rating) as service_rating, 
+        AVG(price_rating) as price_rating, 
+        AVG(cleanliness_rating) as cleanliness_rating
         FROM restaurants
         JOIN cuisines ON cuisines.id = restaurants.cuisine_id
         JOIN restaurant_preferences ON restaurant_preferences.restaurant_id = restaurants.id
@@ -138,28 +138,14 @@ def get_preference_recc_id(user_id: int, limit: int) -> List[RestaurantRecommend
         JOIN reviews ON reviews.restaurant_id = restaurants.id
         WHERE users.id = :user_id
         group by restaurants.id, restaurants.name, cuisines.name, address, city, state, zipcode, phone
-        ORDER BY sum(overall_rating) DESC
+        ORDER BY AVG(overall_rating) DESC
         LIMIT :limit
-        """), [
+        """),
             {
                 "user_id": user_id,
                 "limit": limit,
-            }
-        ])
-        for r_id, name, cuisine, address, city, state, zipcode, phone, overall, food, service, price, cleanliness  in row:
-            restaurants.append(RestaurantRecommendation(
-                id=r_id,
-                name=name,
-                cuisine=cuisine,
-                address=address,
-                city=city,
-                state=state,
-                zipcode=zipcode,
-                phone=phone,
-                overall_score=overall,
-                food_rating=food,
-                service_rating=service,
-                price_rating=price,
-                cleanliness_rating=cleanliness))
+            })
+        for row in result:
+            restaurants.append(RestaurantRecommendation(**row._mapping))
 
     return restaurants
