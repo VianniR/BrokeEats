@@ -23,3 +23,21 @@ Preferences
 * At this time there is no plan to add delete preference to users nor restaurants nor just delete a preference itself
 * get_pref_rec_id now uses row mapping for better readability
 * preference length is now checked
+
+Reviews 
+* Added created_at for reviews class. When calling get_reviews, users can now see date
+* Added cuisine_id to review class.
+* Fields have been added reviews. 0.0 - 5.0 are valid
+* Changed name to cuisine_name for filtering. Less ambiguity about what name is being filtered
+* Filtering by cuisine_name is no longer case sensitive. 
+* In create_review checking for existing review before inserting
+* Delete reviews now has scalar_one_or_none to check review exists before deleting
+* Error code 409 to 404 because it's not found instead of conflict
+* Removed loops from happening inside db call. Using fetchall so I can do the loop outside
+* Pathnames were simplified.
+* Fixed router.patch to router.delete in delete_review
+* Will not return 204 in create_review
+  * I believe seeing the created review is better. You can see the response of what was posted. Can immediately update if there's some error. 204 prevents that possibility
+
+
+
