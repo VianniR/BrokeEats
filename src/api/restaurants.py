@@ -24,7 +24,7 @@ class Restaurant(BaseModel):
     state: str = Field(..., min_length=1)
     zipcode: str = Field(..., pattern=r"^\d{5}$", description="5-digit ZIP Code")
     phone: str
-    last_updated_by: int = Field(..., gt=0)
+    last_updated_by: int = Field(None, gt=0)
     last_updated_at: datetime
 
 class RestaurantUpdate(BaseModel):
