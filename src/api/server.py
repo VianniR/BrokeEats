@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from src.api import restaurants, preferences, users, reviews
+from src.api import restaurants, preferences, users, reviews, cuisines
 
 description = """
 BrokeEats, suggestions by broke college students for broke college students.
@@ -27,6 +27,7 @@ app.include_router(restaurants.router)
 app.include_router(preferences.router)
 app.include_router(users.router)
 app.include_router(reviews.router)
+app.include_router(cuisines.router)
 
 @app.get("/")
 async def root():

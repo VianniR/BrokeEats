@@ -8,6 +8,9 @@ from datetime import datetime
 from src.api.users import RestaurantRecommendation
 
 
+from src.api.users import RestaurantRecommendation
+
+
 router = APIRouter(prefix="/restaurants",
                   tags=["restaurants"],
                    dependencies=[Depends(auth.get_api_key)])
@@ -115,6 +118,17 @@ def get_restaurant(restaurant_id: int):
         }
 
     
+
+class RestaurantFilter(BaseModel):
+    city: str
+    state: str
+    overall_rating: Optional[float] = Field(default=0, ge=0.0, le= 5.0)
+    food_rating: Optional[float] = Field(default=None, ge=0.0, le= 5.0)
+    service_rating: Optional[float] = Field(default=None, ge=0.0, le= 5.0)
+    price_rating: Optional[float] = Field(default=None, ge=0.0, le= 5.0)
+    cleanliness_rating: Optional[float] = Field(default=None, ge=0.0, le= 5.0)
+    cuisine_name: Optional[str] = Field(None, example = '')
+
 
 
 @router.post("/", response_model = Restaurant)
@@ -231,7 +245,7 @@ def delete_restaurant(restaurant_id: int):
             )
     except sqlalchemy.exc.IntegrityError:
         raise HTTPException(status_code = 404, detail = "Restaurant does not exist")
-    
+        
 @router.post("/filter", response_model=List[RestaurantRecommendation])
 def filter_restaurants(payload: RestaurantFilter, limit: int = 100):
     restaurant_reccs: List[RestaurantRecommendation] = []
@@ -300,3 +314,4 @@ def filter_restaurants(payload: RestaurantFilter, limit: int = 100):
             restaurant_reccs.append(RestaurantRecommendation(**r._mapping))
 
     return restaurant_reccs
+
