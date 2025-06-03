@@ -5,6 +5,8 @@ from src.api import auth
 import sqlalchemy
 from src import database as db
 from datetime import datetime
+from src.api.users import RestaurantRecommendation
+
 
 from src.api.users import RestaurantRecommendation
 
@@ -15,26 +17,107 @@ router = APIRouter(prefix="/restaurants",
 
 
 class Restaurant(BaseModel):
-    name: str
-    cuisine_id: int
-    address: str
-    city: str
-    state: str
-    zipcode: str
+    name: str = Field(..., min_length=1, description="Restaurant name must be at least 1 character")
+    cuisine_id: int = Field(..., gt=0)
+    address: str = Field(..., min_length=1)
+    city: str = Field(..., min_length=1)
+    state: str = Field(..., min_length=1)
+    zipcode: str = Field(..., pattern=r"^\d{5}$", description="5-digit ZIP Code")
     phone: str
-    last_updated_by: int
+    last_updated_by: int = Field(..., gt=0)
     last_updated_at: datetime
 
 class RestaurantUpdate(BaseModel):
-    name: Optional[str] = None
-    cuisine_id: Optional[int] = None
-    address: Optional[str] = None
-    city: Optional[str] = None
-    state: Optional[str] = None
-    zipcode: Optional[str] = None
+    name: Optional[str] = Field(None, min_length=1)
+    cuisine_id: Optional[int] = Field(None, gt=0)
+    address: Optional[str] = Field(None, min_length=1)
+    city: Optional[str] = Field(None, min_length=1)
+    state: Optional[str] = Field(None, min_length=1)
+    zipcode: Optional[str] = Field(None, pattern=r"^\d{5}$", description="5-digit ZIP Code")
     phone: Optional[str] = None
+    last_updated_by: int = Field(None, gt=0)
+
+class RestaurantCreate(BaseModel):
+    name: str = Field(..., min_length=1, description="Restaurant name must be at least 1 character")
+    cuisine_id: int = Field(..., gt=0)
+    address: str = Field(..., min_length=1)
+    city: str = Field(..., min_length=1)
+    state: str = Field(..., min_length=1)
+    zipcode: str = Field(..., pattern=r"^\d{5}$", description="5-digit ZIP Code")
+    phone: str
     last_updated_by: int
-    last_updated_at: datetime
+
+class RestaurantFilter(BaseModel):
+    city: str
+    state: str
+    overall_rating: Optional[float] = Field(default=0, ge=0.0, le= 5.0)
+    food_rating: Optional[float] = Field(default=None, ge=0.0, le= 5.0)
+    service_rating: Optional[float] = Field(default=None, ge=0.0, le= 5.0)
+    price_rating: Optional[float] = Field(default=None, ge=0.0, le= 5.0)
+    cleanliness_rating: Optional[float] = Field(default=None, ge=0.0, le= 5.0)
+    cuisine_name: Optional[str] = Field(None, example = '')
+
+@router.get("/", response_model=List[Restaurant])
+def get_all_restaurants():
+    try:
+        with db.engine.begin() as conn:
+            rows = conn.execute(sqlalchemy.text(
+                """
+                SELECT id, name, cuisine_id, address, city, state, zipcode, phone, last_updated_by, last_updated_at
+                FROM restaurants
+                ORDER BY id
+                """
+            )).fetchall()
+
+        return [
+            {   
+                "id": r.id,
+                "name": r.name,
+                "cuisine_id": r.cuisine_id,
+                "address": r.address,
+                "city": r.city,
+                "state": r.state,
+                "zipcode": r.zipcode,
+                "phone": r.phone,
+                "last_updated_by": r.last_updated_by,
+                "last_updated_at": r.last_updated_at,
+            }
+            for r in rows
+        ]
+    except sqlalchemy.exc.IntegrityError:
+        raise HTTPException(status_code = 400, detail = "Error getting restaurants")
+    
+@router.get("/{restaurant_id}", response_model=Restaurant)
+def get_restaurant(restaurant_id: int):
+    with db.engine.begin() as conn:
+        r = conn.execute(sqlalchemy.text(
+            """
+            SELECT id, name, cuisine_id, address, city, state, zipcode, phone, last_updated_by, last_updated_at
+            FROM restaurants
+            WHERE id = :restaurant_id
+            
+            """
+        ), {
+            "restaurant_id": restaurant_id
+            }
+        ).fetchone()
+
+    if r is None:
+        raise HTTPException(status_code = 404, detail = "Restaurant does not exist")
+
+    return { 
+            "name": r.name,
+            "cuisine_id": r.cuisine_id,
+            "address": r.address,
+            "city": r.city,
+            "state": r.state,
+            "zipcode": r.zipcode,
+            "phone": r.phone,
+            "last_updated_by": r.last_updated_by,
+            "last_updated_at": r.last_updated_at,
+        }
+
+    
 
 class RestaurantFilter(BaseModel):
     city: str
@@ -48,8 +131,9 @@ class RestaurantFilter(BaseModel):
 
 
 
-@router.post("/restaurants", response_model = Restaurant)
-def create_restaurant(restaurant: Restaurant):
+@router.post("/", response_model = Restaurant)
+def create_restaurant(restaurant: RestaurantCreate):
+    now = datetime.now()
     try:
         with db.engine.begin() as conn:
             res = conn.execute(sqlalchemy.text(
@@ -67,7 +151,7 @@ def create_restaurant(restaurant: Restaurant):
                         "zipcode": restaurant.zipcode,
                         "phone": restaurant.phone,
                         "last_updated_by": restaurant.last_updated_by,
-                        "last_updated_at": restaurant.last_updated_at
+                        "last_updated_at": now
                     }
                 ).scalar()
             
@@ -83,7 +167,7 @@ def create_restaurant(restaurant: Restaurant):
         zipcode = restaurant.zipcode,
         phone = restaurant.phone,
         last_updated_by = restaurant.last_updated_by,
-        last_updated_at = restaurant.last_updated_at
+        last_updated_at = now
     )
 
 @router.patch("/{restaurant_id}", response_model=Restaurant)
@@ -103,9 +187,11 @@ def update_restaurant(restaurant_id: int, payload: RestaurantUpdate):
         "last_updated_at": "last_updated_at",
     }
 
-
+    
     if not updates:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No fields provided for update")
+    
+    updates["last_updated_at"] = datetime.now()
     
     set_clauses = ", ".join(f"{column_map[field]} = :{field}" for field in updates.keys())
     params = {**updates, "id": restaurant_id}
@@ -144,7 +230,7 @@ def update_restaurant(restaurant_id: int, payload: RestaurantUpdate):
     
 
 
-@router.patch("/restaurants/delete/{restaurant_id}", status_code = status.HTTP_204_NO_CONTENT)
+@router.delete("/{restaurant_id}", status_code = status.HTTP_204_NO_CONTENT)
 def delete_restaurant(restaurant_id: int):
     try:
         with db.engine.begin() as conn:
@@ -158,9 +244,8 @@ def delete_restaurant(restaurant_id: int):
                             }
             )
     except sqlalchemy.exc.IntegrityError:
-        raise HTTPException(status_code = 409, detail = "Restaurant does not exist")
-
-
+        raise HTTPException(status_code = 404, detail = "Restaurant does not exist")
+        
 @router.post("/filter", response_model=List[RestaurantRecommendation])
 def filter_restaurants(payload: RestaurantFilter, limit: int = 100):
     restaurant_reccs: List[RestaurantRecommendation] = []
@@ -229,3 +314,4 @@ def filter_restaurants(payload: RestaurantFilter, limit: int = 100):
             restaurant_reccs.append(RestaurantRecommendation(**r._mapping))
 
     return restaurant_reccs
+
