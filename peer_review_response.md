@@ -39,5 +39,11 @@ Reviews
 * Will not return 204 in create_review
   * I believe seeing the created review is better. You can see the response of what was posted. Can immediately update if there's some error. 204 prevents that possibility
 
-
-
+Restaurants
+* Added GET restaurants endpoint
+* Added GET restaurants/id endpoint
+* Simplified pathnames of endpoints
+* Added additional ResponseModels for creating and updating Restaurants
+* last_updated_at is now set when Restaurant is created
+* User no longer needs to manually set last_updated_at
+* Added data validation to Restaurant models
