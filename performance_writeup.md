@@ -135,7 +135,49 @@ Execution Time: 15.735 ms
 
 
 * Explination
-  * 
+  * Filtering through all restaurants ratings should have an index for a restaurant id and ratings
+
+* solution
+CREATE INDEX idx_reviews_filter_sort
+ON reviews (
+  overall_rating desc,
+  price_rating,
+  food_rating,
+  cleanliness_rating,
+  service_rating,
+  restaurant_id
+  )
+
+  * new explain
+  Limit  (cost=201.55..400.94 rows=2 width=167) (actual time=2.394..2.397 rows=0 loops=1)
+  ->  Incremental Sort  (cost=201.55..400.94 rows=2 width=167) (actual time=2.392..2.395 rows=0 loops=1)
+        Sort Key: reviews.overall_rating DESC, reviews.price_rating DESC, reviews.food_rating DESC
+        Presorted Key: reviews.overall_rating
+        Full-sort Groups: 1  Sort Method: quicksort  Average Memory: 25kB  Peak Memory: 25kB
+        ->  Nested Loop  (cost=2.23..400.85 rows=1 width=167) (actual time=2.383..2.386 rows=0 loops=1)
+              ->  Nested Loop  (cost=1.81..396.41 rows=1 width=167) (actual time=2.382..2.384 rows=0 loops=1)
+                    Join Filter: (reviews.restaurant_id = restaurants.id)
+                    Rows Removed by Join Filter: 232
+                    ->  Index Scan using idx_reviews_filter_sort on reviews  (cost=0.42..362.47 rows=5 width=159) (actual time=1.694..1.925 rows=8 loops=1)
+"                          Index Cond: ((overall_rating >= '5'::double precision) AND (price_rating >= '4'::double precision) AND (food_rating >= '5'::double precision) AND (cleanliness_rating >= '3'::double precision) AND (service_rating >= '1'::double precision))"
+                    ->  Materialize  (cost=1.39..31.54 rows=33 width=12) (actual time=0.014..0.052 rows=29 loops=8)
+                          ->  Hash Join  (cost=1.39..31.38 rows=33 width=12) (actual time=0.103..0.390 rows=29 loops=1)
+                                Hash Cond: (restaurants.cuisine_id = cuisines.id)
+                                ->  Seq Scan on restaurants  (cost=0.00..27.00 rows=1000 width=8) (actual time=0.014..0.161 rows=1000 loops=1)
+                                ->  Hash  (cost=1.38..1.38 rows=1 width=12) (actual time=0.025..0.026 rows=1 loops=1)
+                                      Buckets: 1024  Batches: 1  Memory Usage: 9kB
+                                      ->  Seq Scan on cuisines  (cost=0.00..1.38 rows=1 width=12) (actual time=0.014..0.020 rows=1 loops=1)
+"                                            Filter: ((name)::text = 'Indian'::text)"
+                                            Rows Removed by Filter: 29
+              ->  Index Only Scan using users_pkey on users  (cost=0.42..4.44 rows=1 width=4) (never executed)
+                    Index Cond: (id = reviews.user_id)
+                    Heap Fetches: 0
+Planning Time: 0.930 ms
+Execution Time: 2.464 ms
+
+
+* Outcome
+  * This did have the performance improvement I was expecting as it shortened the query execution drastically although we imagine takes up a good amount of memory 
 
 
 
