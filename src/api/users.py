@@ -85,7 +85,7 @@ def get_profile(user_name: str) -> Profile:
         with db.engine.begin() as connection:
             user = connection.execute(
                 sqlalchemy.text(
-                    "SELECT id, name, username, email, permissions FROM users WHERE LOWER(users.username) = LOWER(:user_name)"
+                    "SELECT id, name, username, email, permissions FROM users WHERE users.username = :user_name"
                 ),
                 {"user_name": user_name}
             ).one()
