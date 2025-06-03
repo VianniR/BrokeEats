@@ -4,6 +4,7 @@ from typing import List, Optional
 from src.api import auth
 import sqlalchemy
 from src import database as db
+import re
 
 router = APIRouter(prefix="/users",
                   tags=["users"],
@@ -18,15 +19,33 @@ class Profile(BaseModel):
         permissions: int
 
 class NewUser(BaseModel):
-    name: str
-    username: str
-    email: str
+    name: str = Field(..., max_length=100)
+    username: str = Field(..., max_length=50, pattern=r'^\w+$')
+    email: str = Field(..., max_length=100, pattern=r'^\S+@\S+\.\S+$')
+
+    @field_validator('name', 'username', 'email')
+    def not_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Field cannot be empty or whitespace')
+        return v
 
 class ProfileUpdate(BaseModel):
-    name: Optional[str] = Field(None, example="")
-    username: Optional[str] = Field(None, example="")
-    email: Optional[str] = Field(None, example="")
+    name: Optional[str] = Field(None, example="", max_length=100)
+    username: Optional[str] = Field(None, example="", max_length=50, pattern=r'^\w+$')
+    email: Optional[str] = Field(None, example="", max_length=100, pattern=r'^\S+@\S+\.\S+$')
 
+    @field_validator('name', 'username', 'email', mode='before')
+    def empty_str_to_none(cls, v):
+        if v is not None and isinstance(v, str) and not v.strip():
+            return None
+        return v
+
+def ensure_user_exists(user_id: int):
+    with db.engine.connect() as conn:
+        result = conn.execute(sqlalchemy.text("SELECT 1 FROM users WHERE id = :user_id"), {"user_id": user_id})
+        if result.first() is None:
+            raise HTTPException(status_code=404, detail="User not found")
+        
 class RestaurantRecommendation(BaseModel):
     id: int
     name: str
@@ -46,22 +65,18 @@ class RestaurantRecommendation(BaseModel):
 def create_profile(profile: NewUser) -> Profile:
     try:
         with db.engine.begin() as conn:
-            user_id = conn.execute(sqlalchemy.text("""
-            INSERT INTO users (name, username, email, permissions)
-            VALUES (:name, :username, :email, 1)
-            RETURNING id
-            """),[
-                {
-                    "name": profile.name,
-                    "username": profile.username,
-                    "email": profile.email,
-                }
-            ]).scalar_one()
+            user_id = conn.execute(sqlalchemy.text(
+                "INSERT INTO users (name, username, email, permissions) VALUES (:name, :username, :email, 1) RETURNING id"
+            ),
+            {
+                "name": profile.name,
+                "username": profile.username,
+                "email": profile.email,
+            }).scalar_one()
     except sqlalchemy.exc.IntegrityError:
         raise HTTPException(status_code=409, detail="Username or email already exists")
 
     return Profile(id=user_id, name=profile.name, username=profile.username, email=profile.email, permissions=1)
-
 
 
 @router.get("/profile/{user_name}", response_model=Profile)
@@ -79,34 +94,34 @@ def get_profile(user_name: str) -> Profile:
     return user
 
 # PATCH endpoint to update username
-@router.patch("profile/{id}", response_model=Profile)
-def update_profile(user_id: int, payload: ProfileUpdate):
+@router.patch("/profile/{id}", response_model=Profile)
+def update_profile(id: int, payload: ProfileUpdate):
     """Updates any provided user fields."""
+    ensure_user_exists(id)
     updates = payload.model_dump(exclude_unset=True)
 
-    updates = {k: v for k, v in updates.items() if not (isinstance(v, str) and v.strip() == "")}
+    updates = {k: v for k, v in updates.items() if v is not None and not (isinstance(v, str) and v.strip() == "")}
 
     if not updates:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No fields provided for update")
     set_clauses = ", ".join(f"{field} = :{field}" for field in updates.keys())
-    params = {**updates, "user_id": user_id}
+    params = {**updates, "user_id": id}
     try:
         with db.engine.begin() as connection:
             connection.execute(
-                    sqlalchemy.text(f"UPDATE users SET {set_clauses} WHERE id = :user_id"),
+                    sqlalchemy.text("UPDATE users SET " + set_clauses + " WHERE id = :user_id"),
                     params
                 )
             user = connection.execute(
                 sqlalchemy.text(
                     "SELECT id, name, username, email, permissions FROM users WHERE id = :user_id"
                 ),
-                {"user_id": user_id}
+                {"user_id": id}
             ).one()
     except sqlalchemy.exc.IntegrityError:
         raise HTTPException(status_code=409, detail="Username or email already exists")
 
     return user
-
 
 
 @router.get("/users/recommendations", response_model=List[RestaurantRecommendation])
@@ -145,7 +160,7 @@ def get_preference_recc_id(user_id: int, limit: int) -> List[RestaurantRecommend
                 "user_id": user_id,
                 "limit": limit,
             })
-        for row in result:
-            restaurants.append(RestaurantRecommendation(**row._mapping))
+        for row in result.mappings():
+            restaurants.append(RestaurantRecommendation(**row))
 
     return restaurants

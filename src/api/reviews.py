@@ -14,7 +14,6 @@ router = APIRouter(prefix="/reviews",
 class Review(BaseModel):
     user_id: int
     restaurant_id: int
-    cuisine_id: int
     overall_rating: float = Field(ge = 0.0, le = 5.0)
     food_rating: Optional[float] = Field(None, ge = 0.0, le = 5.0)
     service_rating: Optional[float] = Field(None, ge = 0.0, le = 5.0)
@@ -78,14 +77,13 @@ def create_review(review : Review):
             )
         
         rev = conn.execute(sqlalchemy.text("""
-        INSERT INTO reviews (user_id, restaurant_id, cuisine_id, overall_rating, food_rating, service_rating, price_rating, cleanliness_rating, written_review)
-        VALUES (:user, :restaurant, :cuisine_id, :overall, :food, :service, :price, :cleanliness, :written)
+        INSERT INTO reviews (user_id, restaurant_id, overall_rating, food_rating, service_rating, price_rating, cleanliness_rating, written_review)
+        VALUES (:user, :restaurant, :overall, :food, :service, :price, :cleanliness, :written)
         RETURNING id, created_at                                  
         """), 
                 {
                     "user": review.user_id,
                     "restaurant": review.restaurant_id,
-                    "cuisine_id": review.cuisine_id,
                     "overall": review.overall_rating,
                     "food": review.food_rating,
                     "service": review.service_rating,
@@ -103,7 +101,7 @@ def get_reviews(restaurant_id: int):
     reviews = []
     with db.engine.begin() as conn:
         revs = conn.execute(
-            sqlalchemy.text("""SELECT user_id, restaurant_id, cuisine_id, overall_rating, food_rating, service_rating, price_rating, cleanliness_rating, written_review, created_at
+            sqlalchemy.text("""SELECT user_id, restaurant_id, overall_rating, food_rating, service_rating, price_rating, cleanliness_rating, written_review, created_at
                                 FROM reviews
                                 WHERE restaurant_id = :restaurant_id
                             """), {"restaurant_id" : restaurant_id}
@@ -114,7 +112,6 @@ def get_reviews(restaurant_id: int):
         reviews.append(ReviewOut(
             user_id=review.user_id,
             restaurant_id=review.restaurant_id,
-            cuisine_id = review.cuisine_id,
             overall_rating=review.overall_rating,
             food_rating=review.food_rating,
             service_rating=review.service_rating,
@@ -177,7 +174,7 @@ def update_review(restaurant_id: int, user_id: int, payload: ReviewUpdate):
             row = conn.execute(
                 sqlalchemy.text(
                     """
-                    SELECT user_id, restaurant_id, cuisine_id, overall_rating, food_rating, service_rating,
+                    SELECT user_id, restaurant_id, overall_rating, food_rating, service_rating,
                            price_rating, cleanliness_rating, written_review, created_at
                     FROM reviews
                     WHERE restaurant_id = :restaurant_id AND user_id = :user_id

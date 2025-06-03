@@ -47,3 +47,14 @@ Restaurants
 * last_updated_at is now set when Restaurant is created
 * User no longer needs to manually set last_updated_at
 * Added data validation to Restaurant models
+
+
+Users
+* Removed f-strings from SQL queries (parameterized them properly).
+* Fixed missing / in @router.patch("/profile/{id}").
+* Used **row via .mappings() for cleaner recommendation building.
+* Eliminated unnecessary [ ] around SQL param dicts.
+* Refactored loop over recommendations for compactness.
+* Added field validation for name, username, and email.
+* Made username lookup in get_profile case-insensitive.
+* Added ensure_user_exists helper and integrated it into the patch route.

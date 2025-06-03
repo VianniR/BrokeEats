@@ -147,7 +147,6 @@ def fake_reviews(n):
         conn.execute(text("TRUNCATE TABLE reviews RESTART IDENTITY CASCADE"))
         restaurant_ids = [r[0] for r in conn.execute(text("SELECT id FROM restaurants")).fetchall()]
         user_ids = [r[0] for r in conn.execute(text("SELECT id FROM users")).fetchall()]
-        cuisine_ids = [r[0] for r in conn.execute(text("SELECT id FROM cuisines")).fetchall()]
 
     seen_pairs = set()
     rows = []
@@ -155,7 +154,6 @@ def fake_reviews(n):
     while len(rows) < n:
         restaurant_id = random.choice(restaurant_ids)
         user_id = random.choice(user_ids)
-        cuisine_id = random.choice(cuisine_ids)
         pair = (restaurant_id, user_id)
         if pair in seen_pairs:
             continue
@@ -164,7 +162,6 @@ def fake_reviews(n):
         rows.append({
             "user_id": user_id,
             "restaurant_id": restaurant_id,
-            "cuisine_id": cuisine_id,
             "overall_rating": round(random.uniform(0.0, 5.0), 1),
             "food_rating": round(random.uniform(0.0, 5.0), 1),
             "service_rating": round(random.uniform(0.0, 5.0), 1),
@@ -174,8 +171,8 @@ def fake_reviews(n):
         })
 
     insert_batch("""
-        INSERT INTO reviews (user_id, restaurant_id, cuisine_id, overall_rating, food_rating, service_rating, price_rating, cleanliness_rating, written_review)
-        VALUES (:user_id, :restaurant_id, :cuisine_id,  :overall_rating, :food_rating, :service_rating, :price_rating, :cleanliness_rating, :written_review)
+        INSERT INTO reviews (user_id, restaurant_id, overall_rating, food_rating, service_rating, price_rating, cleanliness_rating, written_review)
+        VALUES (:user_id, :restaurant_id, :overall_rating, :food_rating, :service_rating, :price_rating, :cleanliness_rating, :written_review)
     """, rows)
 
 
