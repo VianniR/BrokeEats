@@ -14,33 +14,33 @@ router = APIRouter(prefix="/restaurants",
 
 
 class Restaurant(BaseModel):
-    name: str
-    cuisine_id: int
-    address: str
-    city: str
-    state: str
-    zipcode: str
+    name: str = Field(..., min_length=1, description="Restaurant name must be at least 1 character")
+    cuisine_id: int = Field(..., gt=0)
+    address: str = Field(..., min_length=1)
+    city: str = Field(..., min_length=1)
+    state: str = Field(..., min_length=1)
+    zipcode: str = Field(..., pattern=r"^\d{5}$", description="5-digit ZIP Code")
     phone: str
-    last_updated_by: int
+    last_updated_by: int = Field(..., gt=0)
     last_updated_at: datetime
 
 class RestaurantUpdate(BaseModel):
-    name: Optional[str] = None
-    cuisine_id: Optional[int] = None
-    address: Optional[str] = None
-    city: Optional[str] = None
-    state: Optional[str] = None
-    zipcode: Optional[str] = None
+    name: Optional[str] = Field(None, min_length=1)
+    cuisine_id: Optional[int] = Field(None, gt=0)
+    address: Optional[str] = Field(None, min_length=1)
+    city: Optional[str] = Field(None, min_length=1)
+    state: Optional[str] = Field(None, min_length=1)
+    zipcode: Optional[str] = Field(None, pattern=r"^\d{5}$", description="5-digit ZIP Code")
     phone: Optional[str] = None
-    last_updated_by: int
+    last_updated_by: int = Field(None, gt=0)
 
 class RestaurantCreate(BaseModel):
-    name: str
-    cuisine_id: int
-    address: str
-    city: str
-    state: str
-    zipcode: str
+    name: str = Field(..., min_length=1, description="Restaurant name must be at least 1 character")
+    cuisine_id: int = Field(..., gt=0)
+    address: str = Field(..., min_length=1)
+    city: str = Field(..., min_length=1)
+    state: str = Field(..., min_length=1)
+    zipcode: str = Field(..., pattern=r"^\d{5}$", description="5-digit ZIP Code")
     phone: str
     last_updated_by: int
 
