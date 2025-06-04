@@ -262,10 +262,10 @@ def filter_restaurants(payload: RestaurantFilter, limit: int = 100):
     }
     avg_column_map = {
         "overall_rating": "COALESCE(AVG(reviews.overall_rating), 0)",
-        "price_rating": "COALESCE(AVG(reviews.overall_rating), 0)",
-        "cleanliness_rating": "COALESCE(AVG(reviews.overall_rating), 0)",
-        "food_rating": "COALESCE(AVG(reviews.overall_rating), 0)",
-        "service_rating": "COALESCE(AVG(reviews.overall_rating), 0)",
+        "price_rating": "COALESCE(AVG(reviews.price_rating), 0)",
+        "cleanliness_rating": "COALESCE(AVG(reviews.cleanliness_rating), 0)",
+        "food_rating": "COALESCE(AVG(reviews.food_rating), 0)",
+        "service_rating": "COALESCE(AVG(reviews.service_rating), 0)",
     }
 
 
