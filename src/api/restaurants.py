@@ -261,11 +261,11 @@ def filter_restaurants(payload: RestaurantFilter, limit: int = 100):
 
     }
     avg_column_map = {
-        "overall_rating": "AVG(reviews.overall_rating)",
-        "price_rating": "AVG(reviews.price_rating)",
-        "cleanliness_rating": "AVG(reviews.cleanliness_rating)",
-        "food_rating": "AVG(reviews.food_rating)",
-        "service_rating": "AVG(reviews.service_rating)",
+        "overall_rating": "COALESCE(AVG(reviews.overall_rating), 0)",
+        "price_rating": "COALESCE(AVG(reviews.overall_rating), 0)",
+        "cleanliness_rating": "COALESCE(AVG(reviews.overall_rating), 0)",
+        "food_rating": "COALESCE(AVG(reviews.overall_rating), 0)",
+        "service_rating": "COALESCE(AVG(reviews.overall_rating), 0)",
     }
 
 
@@ -294,16 +294,16 @@ def filter_restaurants(payload: RestaurantFilter, limit: int = 100):
         restaurants.state as state, 
         restaurants.zipcode as zipcode, 
         restaurants.phone as phone, 
-        AVG(reviews.overall_rating) AS overall_score,
-        AVG(reviews.food_rating) AS food_rating,
-        AVG(reviews.service_rating) AS service_rating,
-        AVG(reviews.price_rating) AS price_rating,
-        AVG(reviews.cleanliness_rating) AS cleanliness_rating
+        COALESCE(AVG(reviews.overall_rating), 0) AS overall_score,
+        COALESCE(AVG(reviews.food_rating), 0) AS food_rating,
+        COALESCE(AVG(reviews.service_rating), 0) AS service_rating,
+        COALESCE(AVG(reviews.price_rating), 0) AS price_rating,
+        COALESCE(AVG(reviews.cleanliness_rating), 0) AS cleanliness_rating
         FROM restaurants
         JOIN cuisines ON cuisines.id = restaurants.cuisine_id
-        JOIN reviews ON reviews.restaurant_id = restaurants.id
+        left join reviews ON reviews.restaurant_id = restaurants.id
         WHERE {where_sql}
-        GROUP BY restaurants.id, restaurants.name,cuisines.name, restaurants.city, restaurants.state, restaurants.zipcode, restaurants.phone
+        GROUP BY restaurants.id, restaurants.name,cuisines.name, restaurants.city, restaurants.state, restaurants.zipcode, restaurants.phone, restaurants.address
         {f'HAVING {having_sql}' if having_sql else ''}
         ORDER BY overall_score DESC, price_rating DESC
         limit :limit
@@ -314,4 +314,3 @@ def filter_restaurants(payload: RestaurantFilter, limit: int = 100):
             restaurant_reccs.append(RestaurantRecommendation(**r._mapping))
 
     return restaurant_reccs
-
